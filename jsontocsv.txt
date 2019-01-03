@@ -1,0 +1,368 @@
+========================POM.xml====================
+<dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-csv</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20090211</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.6</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.sf.supercsv</groupId>
+            <artifactId>super-csv</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+		
+====================file-1====================
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import in.anil.models.BaseObjectTable;
+import in.anil.models.ColumnNames;
+import in.anil.models.CsvFileDataObject;
+import in.anil.models.SourceEnvironmentTable;
+import in.anil.models.SourceName;
+import in.anil.models.SourceTable;
+import org.supercsv.cellprocessor.constraint.NotNull;
+import org.supercsv.cellprocessor.ift.CellProcessor;
+import org.supercsv.io.CsvBeanWriter;
+import org.supercsv.io.ICsvBeanWriter;
+import org.supercsv.prefs.CsvPreference;
+
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+/**
+ * Created by AH00554631 on 11/20/2018.
+ */
+public class CsvToJsonConvertwrNew {
+    public static void main(String[] args) throws IOException {
+        List<BaseObjectTable> baseObjectTables=readObjectsFromCsv("C:\\Users\\AH00554631\\Desktop\\Mappings.csv");
+        String jsonString = writeAsJson(baseObjectTables);
+        System.out.println(jsonString);
+
+        //convert json to pojo
+        List<BaseObjectTable> baseObjects=writeJsonToPojo(jsonString);
+        System.out.println("====== :"+ baseObjects);
+
+        //covert pojo to csv file data fields
+        List<CsvFileDataObject> dataObjects=convertPojoToCsvFileDate(baseObjects);
+
+        //convert pojo to csv
+        fromJsonToCsv(dataObjects);
+        writeCSVFile("C:\\Users\\AH00554631\\Desktop\\newMappings1.csv",dataObjects);
+    }
+
+    private static List<CsvFileDataObject> convertPojoToCsvFileDate(List<BaseObjectTable> baseObjects) {
+        return baseObjects.stream().map(table->{
+            SourceName sourceName=table.getSourceName();
+            SourceEnvironmentTable env=sourceName.getSourceEnvironmentTable().get(0);
+            SourceTable table1=env.getSourceTable().get(0);
+            ColumnNames column=table1.getColumnNames().get(0);
+            return new CsvFileDataObject(sourceName.getName(),env.getName(),table1.getName(),column.getName(),column.getType(),String.valueOf(column.getLength()));
+        }).collect(Collectors.toList());
+    }
+
+    private static List<BaseObjectTable> readObjectsFromCsv(String csvFile) throws IOException {
+        Pattern pattern = Pattern.compile(",");
+        try (BufferedReader in = new BufferedReader(new FileReader(csvFile))) {
+            return in
+                    .lines()
+                    .skip(2)
+                    .map(line -> {
+                        String[] x = pattern.split(line);
+                        ColumnNames columnNames=new ColumnNames(x[3],x[4],Integer.parseInt(x[5]));
+                        SourceTable table=new SourceTable(x[2],Arrays.asList(columnNames));
+                        SourceEnvironmentTable env=new SourceEnvironmentTable(Arrays.asList(table),x[1]);
+                        SourceName sourceName=new SourceName(x[0],Arrays.asList(env));
+                        return new BaseObjectTable(sourceName);
+                    })
+                    .collect(Collectors.toList());
+        }
+    }
+
+    public static String writeAsJson(List<BaseObjectTable> data) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.writeValueAsString(data);
+    }
+    public static List<BaseObjectTable> writeJsonToPojo(String data) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        List<BaseObjectTable> tables=mapper.readValue(data, new TypeReference<List<BaseObjectTable>>() {});
+        return tables;
+    }
+
+    private static void fromJsonToCsv(List<CsvFileDataObject> players) throws IOException {
+        // create mapper and schema
+        CsvMapper mapper = new CsvMapper();
+        CsvSchema schema = mapper.schemaFor(CsvFileDataObject.class);
+        schema = schema.withColumnSeparator(',');
+        // output writer
+        ObjectWriter myObjectWriter = mapper.writer(schema);
+        File tempFile = new File("C:\\Users\\AH00554631\\Desktop\\newMappings.csv");
+        FileOutputStream tempFileOutputStream = new FileOutputStream(tempFile);
+        BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(tempFileOutputStream, 1024);
+        OutputStreamWriter writerOutputStream = new OutputStreamWriter(bufferedOutputStream, "UTF-8");
+        myObjectWriter.writeValue(writerOutputStream, players);
+    }
+
+    static void writeCSVFile(String csvFileName, List<CsvFileDataObject> listBooks) {
+        ICsvBeanWriter beanWriter = null;
+        CellProcessor[] processors = new CellProcessor[] {
+                new NotNull(),
+                new NotNull(),
+                new NotNull(),
+                new NotNull(),
+                new NotNull(),
+                new NotNull()
+        };
+
+        try {
+            beanWriter = new CsvBeanWriter(new FileWriter(csvFileName),
+                    CsvPreference.STANDARD_PREFERENCE);
+            String[] header = {"sourceName", "sourceEnvironmentName","tableName","columnName","columnType","columnLength"};
+            beanWriter.writeHeader(header);
+
+            for (CsvFileDataObject aBook : listBooks) {
+                beanWriter.write(aBook, header, processors);
+            }
+
+        } catch (IOException ex) {
+            System.err.println("Error writing the CSV file: " + ex);
+        } finally {
+            if (beanWriter != null) {
+                try {
+                    beanWriter.close();
+                } catch (IOException ex) {
+                    System.err.println("Error closing the writer: " + ex);
+                }
+            }
+        }
+    }
+}
+
+============================file-2================================
+
+package in.anil;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import in.anil.model.Player;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.apache.commons.io.FileUtils;
+
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+/**
+ * @author Anil
+ *         Created by Anil on 11/20/2018.
+ */
+public class CsvToJsonConverter {
+
+    public static void main(String[] args) throws IOException {
+        List<Player> players = readObjectsFromCsv("C:\\Users\\AH00554631\\Desktop\\Book1.csv");
+        String jsonString = writeAsJson(players);
+        fromJsonToCsv(players);
+        System.out.println(jsonString);
+
+        for (Player player : players) {
+            System.out.println(writeAsJson(player));
+            writeJsonToCSV(writeAsJson(player));
+        }
+
+    }
+
+    private static List<Player> readObjectsFromCsv(String csvFile) throws IOException {
+        Pattern pattern = Pattern.compile(",");
+        try (BufferedReader in = new BufferedReader(new FileReader(csvFile))) {
+            return in
+                    .lines()
+                    .skip(1)
+                    .map(line -> {
+                        String[] x = pattern.split(line);
+                        return new Player(Integer.parseInt(x[0]),
+                                x[1],
+                                x[2],
+                                x[3],
+                                Integer.parseInt(x[4]));
+                    })
+                    .collect(Collectors.toList());
+        }
+    }
+
+    public static String writeAsJson(Player data) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.writeValueAsString(data);
+    }
+
+    public static String writeAsJson(List<Player> data) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.writeValueAsString(data);
+    }
+
+    public static void writeJsonToCSV(String jsonString){
+        JSONObject output;
+        try {
+            output = new JSONObject(jsonString);
+
+
+//            JSONArray docs = output.getJSONArray("playerId");
+
+            File file=new File("C:\\Users\\AH00554631\\Desktop\\fromJSON.csv");
+            String csv = output.getString("playerId");// CDL.toString(docs);
+            FileUtils.writeStringToFile(file, csv);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void fromJsonToCsv(List<Player> players) throws IOException {
+        // create mapper and schema
+        CsvMapper mapper = new CsvMapper();
+        CsvSchema schema = mapper.schemaFor(Player.class);
+        schema = schema.withColumnSeparator(',');
+
+        // output writer
+        ObjectWriter myObjectWriter = mapper.writer(schema);
+        File tempFile = new File("C:\\Users\\AH00554631\\Desktop\\fromJSON1.csv");
+        FileOutputStream tempFileOutputStream = new FileOutputStream(tempFile);
+        BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(tempFileOutputStream, 1024);
+        OutputStreamWriter writerOutputStream = new OutputStreamWriter(bufferedOutputStream, "UTF-8");
+        myObjectWriter.writeValue(writerOutputStream, players);
+    }
+}
+
+=====================file-3=====================
+
+public class CsvFileDataObject {
+
+    private String sourceName;
+    private String sourceEnvironmentName;
+    private String tableName;
+    private String columnName;
+    private String columnType;
+    private String columnLength;
+
+    public CsvFileDataObject() {
+    }
+
+    public CsvFileDataObject(String sourceName, String sourceEnvironmentName, String tableName, String columnName, String columnType, String columnLength) {
+        this.sourceName = sourceName;
+        this.sourceEnvironmentName = sourceEnvironmentName;
+        this.tableName = tableName;
+        this.columnName = columnName;
+        this.columnType = columnType;
+        this.columnLength = columnLength;
+    }
+
+    public String getSourceName() {
+        return sourceName;
+    }
+
+    public void setSourceName(String sourceName) {
+        this.sourceName = sourceName;
+    }
+
+    public String getSourceEnvironmentName() {
+        return sourceEnvironmentName;
+    }
+
+    public void setSourceEnvironmentName(String sourceEnvironmentName) {
+        this.sourceEnvironmentName = sourceEnvironmentName;
+    }
+
+    public String getTableName() {
+        return tableName;
+    }
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
+    }
+
+    public String getColumnName() {
+        return columnName;
+    }
+
+    public void setColumnName(String columnName) {
+        this.columnName = columnName;
+    }
+
+    public String getColumnType() {
+        return columnType;
+    }
+
+    public void setColumnType(String columnType) {
+        this.columnType = columnType;
+    }
+
+    public String getColumnLength() {
+        return columnLength;
+    }
+
+    public void setColumnLength(String columnLength) {
+        this.columnLength = columnLength;
+    }
+}
+
+==========================file-4=======================
+
+==============Object Serialization=============
+public void setToken(OAuth2AccessToken token) {
+        byte[] bytesSerializedAccessToken = SerializationUtils.serialize(token);
+        StringBuilder stringSerializedAccessToken = new StringBuilder();
+        for (int i = 0; i < bytesSerializedAccessToken.length; i++) {
+            if (i == bytesSerializedAccessToken.length - 1) {
+                stringSerializedAccessToken.append(bytesSerializedAccessToken[i]);
+            } else {
+                stringSerializedAccessToken.append(bytesSerializedAccessToken[i]).append(",");
+            }
+        }
+        this.token = stringSerializedAccessToken.toString();
+    }
+	
+==============Object DeSerialization=============
+public OAuth2AccessToken getOAuth2AccessToken(){
+        String[] stringsSerializedAccessToken = getToken().split(",");
+        byte[] bytesSerializedAccessToken = new byte[stringsSerializedAccessToken.length];
+        for (int i = 0; i < stringsSerializedAccessToken.length; i++) {
+            bytesSerializedAccessToken[i] = Byte.parseByte(stringsSerializedAccessToken[i].trim());
+        }
+        return (OAuth2AccessToken) SerializationUtils.deserialize(bytesSerializedAccessToken);
+    }
+	
+	
+================

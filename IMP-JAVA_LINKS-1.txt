@@ -1,0 +1,35 @@
+
+============================IMP LINKS======================================
+
+https://dzone.com/articles/an-introduction-to-the-java-collections-framework
+
+https://dzone.com/articles/10-oops-concepts-in-java
+
+https://dzone.com/articles/java-exception-handling-interview-questions-and-an-1
+
+==============Object Serialization=============
+public void setToken(OAuth2AccessToken token) {
+        byte[] bytesSerializedAccessToken = SerializationUtils.serialize(token);
+        StringBuilder stringSerializedAccessToken = new StringBuilder();
+        for (int i = 0; i < bytesSerializedAccessToken.length; i++) {
+            if (i == bytesSerializedAccessToken.length - 1) {
+                stringSerializedAccessToken.append(bytesSerializedAccessToken[i]);
+            } else {
+                stringSerializedAccessToken.append(bytesSerializedAccessToken[i]).append(",");
+            }
+        }
+        this.token = stringSerializedAccessToken.toString();
+    }
+	
+==============Object DeSerialization=============
+public OAuth2AccessToken getOAuth2AccessToken(){
+        String[] stringsSerializedAccessToken = getToken().split(",");
+        byte[] bytesSerializedAccessToken = new byte[stringsSerializedAccessToken.length];
+        for (int i = 0; i < stringsSerializedAccessToken.length; i++) {
+            bytesSerializedAccessToken[i] = Byte.parseByte(stringsSerializedAccessToken[i].trim());
+        }
+        return (OAuth2AccessToken) SerializationUtils.deserialize(bytesSerializedAccessToken);
+    }
+	
+https://dzone.com/articles/50-best-performance-practices-for-hibernate-5-amp
+

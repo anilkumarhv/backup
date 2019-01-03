@@ -1,0 +1,60 @@
+Key Points
+Some key points on the enum type are:
+
+Java enums extend the java.lang.Enum class implicitly. Therefore, you cannot extend any other class in enum.
+Enums can implement interfaces. They implicitly implement the Serializable and Comparable interfaces. This means if you need some common functionality along diverse enum types, you can define it with an interface to have the enums provide the method implementations.
+In Java, enum is a keyword. Enum constructors are always private or default. Therefore, you cannot have public or protected constructors in an enum type.
+In an enum definition, comma separated constants must be terminated with a semicolon.
+You cannot create an instance of enum using the new operator.
+You can declare abstract methods within an enum. If you do so, all the enum fields must implement the abstract methods.
+You can use the “==” operator to compare enum constants effectively, since enum constants are final.
+
+
+=====================================================================
+
+-Dmaven.test.failure.ignore=true (or -DtestFailureIgnore=true) - will ignore any failures occurred during test execution
+
+-Dmaven.test.error.ignore=true ( deprecated ) - will ignore any errors occurred during test execution
+
+-DskipTests - would compile the test classes but skip test execution entirely
+
+-Dmaven.test.skip=true - would not even compile the tests
+
+I believe that in your case where you want to compile test classes but not fail the build due to any tests errors and still create the jar.
+
+You should use the first option to ignore any test failures which you can still review once the build has finished.
+
+=========================================================================================
+
+╔══════════════╦═════════════════════╦═══════════════════╦═════════════════════╗
+║   Property   ║       HashMap       ║      TreeMap      ║     LinkedHashMap   ║
+╠══════════════╬═════════════════════╬═══════════════════╬═════════════════════╣
+║ Iteration    ║  no guarantee order ║ sorted according  ║                     ║
+║   Order      ║ will remain constant║ to the natural    ║    insertion-order  ║
+║              ║      over time      ║    ordering       ║                     ║
+╠══════════════╬═════════════════════╬═══════════════════╬═════════════════════╣
+║  Get/put     ║                     ║                   ║                     ║
+║   remove     ║         O(1)        ║      O(log(n))    ║         O(1)        ║
+║ containsKey  ║                     ║                   ║                     ║
+╠══════════════╬═════════════════════╬═══════════════════╬═════════════════════╣
+║              ║                     ║   NavigableMap    ║                     ║
+║  Interfaces  ║         Map         ║       Map         ║         Map         ║
+║              ║                     ║    SortedMap      ║                     ║
+╠══════════════╬═════════════════════╬═══════════════════╬═════════════════════╣
+║              ║                     ║                   ║                     ║
+║     Null     ║       allowed       ║    only values    ║       allowed       ║
+║ values/keys  ║                     ║                   ║                     ║
+╠══════════════╬═════════════════════╩═══════════════════╩═════════════════════╣
+║              ║   Fail-fast behavior of an iterator cannot be guaranteed      ║
+║   Fail-fast  ║ impossible to make any hard guarantees in the presence of     ║
+║   behavior   ║           unsynchronized concurrent modification              ║
+╠══════════════╬═════════════════════╦═══════════════════╦═════════════════════╣
+║              ║                     ║                   ║                     ║
+║Implementation║      buckets        ║   Red-Black Tree  ║    double-linked    ║
+║              ║                     ║                   ║       buckets       ║
+╠══════════════╬═════════════════════╩═══════════════════╩═════════════════════╣
+║      Is      ║                                                               ║
+║ synchronized ║              implementation is not synchronized               ║
+╚══════════════╩═══════════════════════════════════════════════════════════════╝
+
+
